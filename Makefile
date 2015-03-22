@@ -7,7 +7,7 @@
 # Copyright (c) 2015 David G. Grier
 #
 TARGET = cudacgh
-INSTDIR = /usr/local/IDL/cuda
+INSTALLDIR = /usr/local/IDL/cuda
 
 IDL = idl -quiet
 INSTALL = install
@@ -46,7 +46,8 @@ $(LIBRARY): $(SRC) $(DLM)
 
 install: $(LIBRARY) $(DLM)
 	sudo $(INSTALL) -d $(INSTALLDIR)
-	sudo $(INSTALL) $(LIBRARY) $(DLM) $(INSTALLDIR)
+	sudo $(INSTALL) $(LIBRARY) $(INSTALLDIR)
+	sudo $(INSTALL) -m 644 $(DLM) $(INSTALLDIR)
 
 uninstall:
 	sudo -rm $(INSTALLDIR)/{$(LIBRARY),$(DLM)}
