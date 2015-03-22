@@ -44,6 +44,9 @@ all: $(LIBRARY)
 $(LIBRARY): $(SRC) $(DLM)
 	$(NVCC) $(CFLAGS) $(LDFLAGS) -o $(LIBRARY) $(SRC)
 
+test: $(LIBRARY) $(DLM)
+	$(IDL) testcgh.pro
+
 install: $(LIBRARY) $(DLM)
 	sudo $(INSTALL) -d $(INSTALLDIR)
 	sudo $(INSTALL) $(LIBRARY) $(INSTALLDIR)

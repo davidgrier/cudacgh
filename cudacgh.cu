@@ -250,7 +250,7 @@ extern "C" int IDL_Load(void)
     { (IDL_SYSRTN_GENERIC) cudacgh_initialize,
       (char *) "CUDACGH_INITIALIZE", 1, 1, 0, 0 },
     { (IDL_SYSRTN_GENERIC) cudacgh_addtrap,
-      (char *) "CUDACGH_ADDTRAP", 2, 2, 0, 0 }
+      (char *) "CUDACGH_ADDTRAP", 3, 3, 0, 0 }
   };
   
   nfcns = IDL_CARRAY_ELTS(function_addr);
