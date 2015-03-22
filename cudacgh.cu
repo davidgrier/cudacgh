@@ -160,30 +160,41 @@ extern "C" void IDL_CDECL cudacgh_addtrap(int argc, IDL_VPTR argv[])
   char *pcgh;
   CGH_BUFFER cgh;
   CGH_CALIBRATION cal;
-  char *pp;
+  char *pdata;
   CGH_TRAP p;
 
   // CGH_BUFFER structure  
   IDL_VarGetData(argv[0], &n, &pcgh, TRUE);
   memcpy(&cgh, pcgh, sizeof(CGH_BUFFER));
 
-  // Trap position
-  IDL_ENSURE_SIMPLE(argv[1]);
-  IDL_ENSURE_ARRAY(argv[1]);
-  if ((argv[1]->value.arr->n_elts != 5) ||
-      (argv[1]->value.arr->arr_len != sizeof(CGH_TRAP))) {
+  // CGH calibration constants
+  // use actual parameters from IDL
+  // cal.kx = cgh.width/2.;
+  // cal.ky = cgh.height/2.;
+  // cal.q = 2.*M_PI/cgh.width;
+  // cal.aspect_ratio = 1.;
+  IDL_ENSURE_ARRAY(argv[2]);
+  if ((argv[1]->value.arr->n_elts != 4) ||
+      (argv[1]->value.arr->arr_len != sizeof(CGH_CALIBRATION))) {
     IDL_Message(IDL_M_NAMED_GENERIC, IDL_MSG_INFO,
-		"Not a valid trap position.  Skipping.");
+		"Not valid calibration settings.  Skipping.");
     return;
   }
-  IDL_VarGetData(argv[1], &n, &pp, TRUE);
-  memcpy(&p, pp, sizeof(CGH_TRAP));
+  IDL_VarGetData(argv[1], &n, &pdata, TRUE);
+  memcpy(&cal, pdata, sizeof(CGH_CALIBRATION));
   
-  // use actual parameters from IDL
-  cal.kx = cgh.width/2.;
-  cal.ky = cgh.height/2.;
-  cal.q = 2.*M_PI/cgh.width;
-  cal.aspect_ratio = 1.;
+  // Trap position
+  IDL_ENSURE_ARRAY(argv[2]);
+  if ((argv[2]->value.arr->n_elts != 5) ||
+      (argv[2]->value.arr->arr_len != sizeof(CGH_TRAP))) {
+    IDL_Message(IDL_M_NAMED_GENERIC, IDL_MSG_INFO,
+		"Not a valid trap description.  Skipping.");
+    return;
+  }
+  IDL_VarGetData(argv[2], &n, &pdata, TRUE);
+  memcpy(&p, pdata, sizeof(CGH_TRAP));
+  
+  
 
   addtrap<<<(cgh.len + 255)/256, 256>>>(cgh, cal, p);
   CudaCheckError();
