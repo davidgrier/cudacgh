@@ -25,12 +25,9 @@ typedef struct cgh_buffer {
   float *y;
   float *psir;
   float *psii;
-  float *phi;
-  unsigned char *iphi;
+  unsigned char *phi;
   size_t width;
-  size_t height;
   size_t len;
-  size_t nbytes;
 } CGH_BUFFER;
 
 typedef struct cgh_calibration {
@@ -77,18 +74,7 @@ __global__ void getphase(CGH_BUFFER cgh)
   int i = blockIdx.x*blockDim.x + threadIdx.x;
 
   if (i < cgh.len)
-    cgh.phi[i] = atan2f(cgh.psir[i], cgh.psii[i]) + M_PI;
-}
-
-//
-// getphase_scaled
-//
-__global__ void getphase_scaled(CGH_BUFFER cgh)
-{
-  int i = blockIdx.x*blockDim.x + threadIdx.x;
-
-  if (i < cgh.len)
-    cgh.iphi[i] = (unsigned char) (127.5/M_PI * (atan2f(cgh.psir[i], cgh.psii[i]) + M_PI));
+    cgh.phi[i] = (unsigned char) (127.5*(atan2f(cgh.psir[i], cgh.psii[i])/M_PI + 1.));
 }
 
 //
@@ -100,20 +86,21 @@ __global__ void getphase_scaled(CGH_BUFFER cgh)
 //
 extern "C" IDL_VPTR IDL_CDECL cudacgh_allocate(int argc, IDL_VPTR argv[])
 {
+  CGH_BUFFER cgh;
+  size_t height;
+  size_t nbytes;
   IDL_VPTR idl_cgh;
   char *pcgh;
-  CGH_BUFFER cgh;
 
   cgh.width  = IDL_LongScalar(argv[0]);
-  cgh.height = IDL_LongScalar(argv[1]);
-  cgh.len = cgh.width * cgh.height;
-  cgh.nbytes = cgh.len * sizeof(float);
-  CudaSafeCall( cudaMalloc((void **) &cgh.x, cgh.nbytes) );
-  CudaSafeCall( cudaMalloc((void **) &cgh.y, cgh.nbytes) );
-  CudaSafeCall( cudaMalloc((void **) &cgh.psir, cgh.nbytes) );
-  CudaSafeCall( cudaMalloc((void **) &cgh.psii, cgh.nbytes) );
-  CudaSafeCall( cudaMalloc((void **) &cgh.phi, cgh.nbytes) );
-  CudaSafeCall( cudaMalloc((void **) &cgh.iphi, cgh.len) );
+  height = IDL_LongScalar(argv[1]);
+  cgh.len = cgh.width * height;
+  nbytes = cgh.len * sizeof(float);
+  CudaSafeCall( cudaMalloc((void **) &cgh.x, nbytes) );
+  CudaSafeCall( cudaMalloc((void **) &cgh.y, nbytes) );
+  CudaSafeCall( cudaMalloc((void **) &cgh.psir, nbytes) );
+  CudaSafeCall( cudaMalloc((void **) &cgh.psii, nbytes) );
+  CudaSafeCall( cudaMalloc((void **) &cgh.phi, cgh.len) );
 
   pcgh = IDL_MakeTempVector(IDL_TYP_BYTE, sizeof(CGH_BUFFER),
 			    IDL_ARR_INI_NOP, &idl_cgh);
@@ -132,12 +119,14 @@ extern "C" void IDL_CDECL cudacgh_initialize(int argc, IDL_VPTR argv[])
   IDL_MEMINT n;
   char *pcgh;
   CGH_BUFFER cgh;
+  size_t nbytes;
   
   IDL_VarGetData(argv[0], &n, &pcgh, TRUE);
   memcpy(&cgh, pcgh, sizeof(CGH_BUFFER));
 
-  CudaSafeCall( cudaMemset(cgh.psii, 0, cgh.nbytes) );
-  CudaSafeCall( cudaMemset(cgh.psir, 0, cgh.nbytes) );
+  nbytes = cgh.len * sizeof(float);
+  CudaSafeCall( cudaMemset(cgh.psii, 0, nbytes) );
+  CudaSafeCall( cudaMemset(cgh.psir, 0, nbytes) );
 }
 
 //
@@ -159,7 +148,6 @@ extern "C" void IDL_CDECL cudacgh_free(int argc, IDL_VPTR argv[])
   CudaSafeCall( cudaFree(cgh.psir) );
   CudaSafeCall( cudaFree(cgh.psii) );
   CudaSafeCall( cudaFree(cgh.phi) );
-  CudaSafeCall( cudaFree(cgh.iphi) );
 }
 
 //
@@ -229,9 +217,9 @@ extern "C" IDL_VPTR IDL_CDECL cudacgh_getphase(int argc, IDL_VPTR argv[])
   CudaCheckError();
   
   dim[0] = cgh.width;
-  dim[1] = cgh.height;
-  pd = IDL_MakeTempArray(IDL_TYP_FLOAT, 2, dim, IDL_ARR_INI_NOP, &idl_phi);
-  CudaSafeCall( cudaMemcpy(pd, cgh.phi, cgh.nbytes, cudaMemcpyDeviceToHost) );
+  dim[1] = cgh.len/cgh.width; // height
+  pd = IDL_MakeTempArray(IDL_TYP_BYTE, 2, dim, IDL_ARR_INI_NOP, &idl_phi);
+  CudaSafeCall( cudaMemcpy(pd, cgh.phi, cgh.len, cudaMemcpyDeviceToHost) );
   
   return idl_phi;
 }
