@@ -26,6 +26,7 @@ typedef struct cgh_buffer {
   float *psir;
   float *psii;
   float *phi;
+  unsigned char *iphi;
   size_t width;
   size_t height;
   size_t len;
@@ -80,6 +81,17 @@ __global__ void getphase(CGH_BUFFER cgh)
 }
 
 //
+// getphase_scaled
+//
+__global__ void getphase_scaled(CGH_BUFFER cgh)
+{
+  int i = blockIdx.x*blockDim.x + threadIdx.x;
+
+  if (i < cgh.len)
+    cgh.iphi[i] = (unsigned char) (127.5/M_PI * (atan2f(cgh.psir[i], cgh.psii[i]) + M_PI));
+}
+
+//
 // cgh = cudacgh_allocate(width, height)
 //
 // Allocate memory for the GPU buffers in the CGH_BUFFER structure.
@@ -101,6 +113,7 @@ extern "C" IDL_VPTR IDL_CDECL cudacgh_allocate(int argc, IDL_VPTR argv[])
   CudaSafeCall( cudaMalloc((void **) &cgh.psir, cgh.nbytes) );
   CudaSafeCall( cudaMalloc((void **) &cgh.psii, cgh.nbytes) );
   CudaSafeCall( cudaMalloc((void **) &cgh.phi, cgh.nbytes) );
+  CudaSafeCall( cudaMalloc((void **) &cgh.iphi, cgh.len) );
 
   pcgh = IDL_MakeTempVector(IDL_TYP_BYTE, sizeof(CGH_BUFFER),
 			    IDL_ARR_INI_NOP, &idl_cgh);
@@ -146,6 +159,7 @@ extern "C" void IDL_CDECL cudacgh_free(int argc, IDL_VPTR argv[])
   CudaSafeCall( cudaFree(cgh.psir) );
   CudaSafeCall( cudaFree(cgh.psii) );
   CudaSafeCall( cudaFree(cgh.phi) );
+  CudaSafeCall( cudaFree(cgh.iphi) );
 }
 
 //
@@ -168,11 +182,6 @@ extern "C" void IDL_CDECL cudacgh_addtrap(int argc, IDL_VPTR argv[])
   memcpy(&cgh, pcgh, sizeof(CGH_BUFFER));
 
   // CGH calibration constants
-  // use actual parameters from IDL
-  // cal.kx = cgh.width/2.;
-  // cal.ky = cgh.height/2.;
-  // cal.q = 2.*M_PI/cgh.width;
-  // cal.aspect_ratio = 1.;
   IDL_ENSURE_ARRAY(argv[2]);
   if ((argv[1]->value.arr->n_elts != 4) ||
       (argv[1]->value.arr->arr_len != sizeof(CGH_CALIBRATION))) {
@@ -194,8 +203,6 @@ extern "C" void IDL_CDECL cudacgh_addtrap(int argc, IDL_VPTR argv[])
   IDL_VarGetData(argv[2], &n, &pdata, TRUE);
   memcpy(&p, pdata, sizeof(CGH_TRAP));
   
-  
-
   addtrap<<<(cgh.len + 255)/256, 256>>>(cgh, cal, p);
   CudaCheckError();
 }
