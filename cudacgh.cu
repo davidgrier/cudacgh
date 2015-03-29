@@ -78,6 +78,19 @@ __global__ void getphase(CGH_BUFFER cgh)
 }
 
 //
+// setbackground
+//
+__global__ void setbackground(int n, float *psir, float *psii)
+{
+  int i = blockIdx.x*blockDim.x + threadIdx.x;
+
+  if (i < n) {
+    psii[i] = sin(psir[i]);
+    psir[i] = cos(psir[i]);
+  }
+}
+
+//
 // cgh = cudacgh_allocate(width, height)
 //
 // Allocate memory for the GPU buffers in the CGH_BUFFER structure.
@@ -112,7 +125,7 @@ extern "C" IDL_VPTR IDL_CDECL cudacgh_allocate(int argc, IDL_VPTR argv[])
 //
 // cudacgh_initialize, cgh
 //
-// Set the field in the SLM plane to zero.
+// Set the field in the SLM plane to precomputed background, or zero.
 //
 extern "C" void IDL_CDECL cudacgh_initialize(int argc, IDL_VPTR argv[])
 {
@@ -125,8 +138,19 @@ extern "C" void IDL_CDECL cudacgh_initialize(int argc, IDL_VPTR argv[])
   memcpy(&cgh, pcgh, sizeof(CGH_BUFFER));
 
   nbytes = cgh.len * sizeof(float);
-  CudaSafeCall( cudaMemset(cgh.psii, 0, nbytes) );
-  CudaSafeCall( cudaMemset(cgh.psir, 0, nbytes) );
+
+  if ((argc == 2) &&
+      (argv[1]->type == IDL_TYP_FLOAT) &&
+      (argv[1]->flags & IDL_V_ARR) &&
+      (argv[1]->value.arr->arr_len == nbytes)) {
+    CudaSafeCall( cudaMemcpy(cgh.psir, argv[1]->value.arr->data, nbytes,
+			     cudaMemcpyHostToDevice) );
+    setbackground<<<(cgh.len + 255)/256, 256>>>(nbytes, cgh.psir, cgh.psii);
+    CudaCheckError();
+  } else {
+    CudaSafeCall( cudaMemset(cgh.psii, 0, nbytes) );
+    CudaSafeCall( cudaMemset(cgh.psir, 0, nbytes) );
+  } 
 }
 
 //
@@ -243,7 +267,7 @@ extern "C" int IDL_Load(void)
     { (IDL_SYSRTN_GENERIC) cudacgh_free,
       (char *) "CUDACGH_FREE", 1, 1, 0, 0 },
     { (IDL_SYSRTN_GENERIC) cudacgh_initialize,
-      (char *) "CUDACGH_INITIALIZE", 1, 1, 0, 0 },
+      (char *) "CUDACGH_INITIALIZE", 1, 2, 0, 0 },
     { (IDL_SYSRTN_GENERIC) cudacgh_addtrap,
       (char *) "CUDACGH_ADDTRAP", 3, 3, 0, 0 }
   };
