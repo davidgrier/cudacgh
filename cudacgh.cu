@@ -112,7 +112,7 @@ extern "C" IDL_VPTR IDL_CDECL cudacgh_allocate(int argc, IDL_VPTR argv[])
 //
 // cudacgh_initialize, cgh
 //
-// Set the field in the SLM plane to precomputed background, or zero.
+// Set the field in the SLM plane to zero.
 //
 extern "C" void IDL_CDECL cudacgh_initialize(int argc, IDL_VPTR argv[])
 {
@@ -125,6 +125,7 @@ extern "C" void IDL_CDECL cudacgh_initialize(int argc, IDL_VPTR argv[])
   memcpy(&cgh, pcgh, sizeof(CGH_BUFFER));
 
   nbytes = cgh.len * sizeof(float);
+<<<<<<< HEAD
 
   if ((argc == 3) &&
       (argv[1]->value.arr->arr_len == nbytes) &&
@@ -137,6 +138,10 @@ extern "C" void IDL_CDECL cudacgh_initialize(int argc, IDL_VPTR argv[])
     CudaSafeCall( cudaMemset(cgh.psii, 0, nbytes) );
     CudaSafeCall( cudaMemset(cgh.psir, 0, nbytes) );
   } 
+=======
+  CudaSafeCall( cudaMemset(cgh.psii, 0, nbytes) );
+  CudaSafeCall( cudaMemset(cgh.psir, 0, nbytes) );
+>>>>>>> parent of 173d4ce... initialize with background hologram
 }
 
 //
@@ -253,7 +258,11 @@ extern "C" int IDL_Load(void)
     { (IDL_SYSRTN_GENERIC) cudacgh_free,
       (char *) "CUDACGH_FREE", 1, 1, 0, 0 },
     { (IDL_SYSRTN_GENERIC) cudacgh_initialize,
+<<<<<<< HEAD
       (char *) "CUDACGH_INITIALIZE", 1, 3, 0, 0 },
+=======
+      (char *) "CUDACGH_INITIALIZE", 1, 1, 0, 0 },
+>>>>>>> parent of 173d4ce... initialize with background hologram
     { (IDL_SYSRTN_GENERIC) cudacgh_addtrap,
       (char *) "CUDACGH_ADDTRAP", 3, 3, 0, 0 }
   };
