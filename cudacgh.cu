@@ -55,7 +55,7 @@ __global__ void addtrap(CGH_BUFFER cgh,
   int i = blockIdx.x*blockDim.x + threadIdx.x;
 
   if (i < cgh.len) {
-    cgh.x[i] = ((float) (i % cgh.width)) - cal.kx;
+    cgh.x[i] = -((float) (i % cgh.width)) - cal.kx;
     cgh.y[i] = ((float) (i / cgh.width)) - cal.ky;
     cgh.x[i] = cal.q * cgh.x[i];
     cgh.y[i] = cal.q * cal.aspect_ratio * cgh.y[i];
