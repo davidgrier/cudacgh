@@ -6,6 +6,7 @@
 //
 // MODIFICATION HISTORY:
 // 03/22/2015 Written by David G. Grier, New York University
+// 07/25/2015 DGG Implemented CUDACGH_GETFIELD()
 //
 // Copyright (c) 2015 David G. Grier
 //
@@ -230,7 +231,7 @@ extern "C" IDL_VPTR IDL_CDECL cudacgh_getphase(int argc, IDL_VPTR argv[])
   IDL_MEMINT n;
   char *pcgh;
   CGH_BUFFER cgh;
-  IDL_MEMINT dim[2];
+  IDL_MEMINT dim[IDL_MAX_ARRAY_DIM];
   IDL_VPTR idl_phi;
   char *pd;
 
@@ -249,6 +250,35 @@ extern "C" IDL_VPTR IDL_CDECL cudacgh_getphase(int argc, IDL_VPTR argv[])
 }
 
 //
+// field = cudacgh_getfield(cgh)
+//
+// Returns the complex-valued field in the SLM plane.
+//
+extern "C" IDL_VPTR IDL_CDECL cudacgh_getfield(int argc, IDL_VPTR argv[])
+{
+  IDL_MEMINT n, len;
+  char *pcgh;
+  CGH_BUFFER cgh;
+  IDL_MEMINT dim[IDL_MAX_ARRAY_DIM];
+  IDL_VPTR idl_field;
+  char *pd;
+
+  IDL_VarGetData(argv[0], &n, &pcgh, TRUE);
+  memcpy(&cgh, pcgh, sizeof(CGH_BUFFER));
+
+  dim[0] = cgh.width;
+  dim[1] = cgh.len/cgh.width; // height
+  dim[2] = 2;
+  pd = IDL_MakeTempArray(IDL_TYP_FLOAT, 3, dim, IDL_ARR_INI_ZERO, &idl_field);
+  
+  len = cgh.len * sizeof(float);
+  CudaSafeCall( cudaMemcpy(pd    , cgh.psir, len, cudaMemcpyDeviceToHost) );
+  CudaSafeCall( cudaMemcpy(pd+len, cgh.psii, len, cudaMemcpyDeviceToHost) );
+      
+  return idl_field;
+}
+
+//
 // IDL_Load
 //
 extern "C" int IDL_Load(void)
@@ -261,6 +291,8 @@ extern "C" int IDL_Load(void)
       (char *) "CUDACGH_ALLOCATE", 2, 2, 0, 0 },
     { (IDL_SYSRTN_GENERIC) cudacgh_getphase,
       (char *) "CUDACGH_GETPHASE", 1, 1, 0, 0 },
+    { (IDL_SYSRTN_GENERIC) cudacgh_getfield,
+      (char *) "CUDACGH_GETFIELD", 1, 1, 0, 0 },
   };
 
   static IDL_SYSFUN_DEF2 procedure_addr[] = {
