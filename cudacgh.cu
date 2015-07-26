@@ -306,7 +306,7 @@ extern "C" int IDL_Load(void)
     { (IDL_SYSRTN_GENERIC) cudacgh_free,
       (char *) "CUDACGH_FREE", 1, 1, 0, 0 },
     { (IDL_SYSRTN_GENERIC) cudacgh_initialize,
-      (char *) "CUDACGH_INITIALIZE", 1, 2, 0, 0 },
+      (char *) "CUDACGH_INITIALIZE", 1, 3, 0, 0 },
     { (IDL_SYSRTN_GENERIC) cudacgh_addtrap,
       (char *) "CUDACGH_ADDTRAP", 3, 3, 0, 0 }
   };
