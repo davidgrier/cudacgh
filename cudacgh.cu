@@ -126,7 +126,7 @@ extern "C" IDL_VPTR IDL_CDECL cudacgh_allocate(int argc, IDL_VPTR argv[])
 //
 // cudacgh_initialize, cgh
 //
-// Set the field in the SLM plane to zero.
+// Initialize the field in the SLM plane.
 //
 extern "C" void IDL_CDECL cudacgh_initialize(int argc, IDL_VPTR argv[])
 {
@@ -140,14 +140,14 @@ extern "C" void IDL_CDECL cudacgh_initialize(int argc, IDL_VPTR argv[])
 
   nbytes = cgh.len * sizeof(float);
 
-  if ((argc == 2) &&
+  if ((argc == 3) &&
       (argv[1]->type == IDL_TYP_FLOAT) &&
       (argv[1]->flags & IDL_V_ARR) &&
       (argv[1]->value.arr->arr_len == nbytes)) {
-    CudaSafeCall( cudaMemcpy(cgh.psir, argv[1]->value.arr->data, nbytes,
-			     cudaMemcpyHostToDevice) );
-    setbackground<<<(cgh.len + 255)/256, 256>>>(nbytes, cgh.psir, cgh.psii);
-    CudaCheckError();
+    pcgh = (char *) argv[1]->value.arr->data;
+    CudaSafeCall( cudaMemcpy(cgh.psir, pcgh, nbytes, cudaMemcpyHostToDevice) );
+    pcgh = (char *) argv[2]->value.arr->data;
+    CudaSafeCall( cudaMemcpy(cgh.psii, pcgh, nbytes, cudaMemcpyHostToDevice) );
   } else {
     CudaSafeCall( cudaMemset(cgh.psii, 0, nbytes) );
     CudaSafeCall( cudaMemset(cgh.psir, 0, nbytes) );
