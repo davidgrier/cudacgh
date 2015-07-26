@@ -260,21 +260,28 @@ extern "C" IDL_VPTR IDL_CDECL cudacgh_getfield(int argc, IDL_VPTR argv[])
   char *pcgh;
   CGH_BUFFER cgh;
   IDL_MEMINT dim[IDL_MAX_ARRAY_DIM];
-  IDL_VPTR idl_field;
-  char *pd;
+  IDL_VPTR idl_fr, idl_fi, idl_field, idl_argv[2];
+  char *pr, *pi;
 
   IDL_VarGetData(argv[0], &n, &pcgh, TRUE);
   memcpy(&cgh, pcgh, sizeof(CGH_BUFFER));
 
   dim[0] = cgh.width;
   dim[1] = cgh.len/cgh.width; // height
-  dim[2] = 2;
-  pd = IDL_MakeTempArray(IDL_TYP_FLOAT, 3, dim, IDL_ARR_INI_ZERO, &idl_field);
+  pr = IDL_MakeTempArray(IDL_TYP_FLOAT, 2, dim, IDL_ARR_INI_NOP, &idl_fr);
+  pi = IDL_MakeTempArray(IDL_TYP_FLOAT, 2, dim, IDL_ARR_INI_NOP, &idl_fi);
+  idl_argv[0] = idl_fr;
+  idl_argv[1] = idl_fi;
   
   len = cgh.len * sizeof(float);
-  CudaSafeCall( cudaMemcpy(pd    , cgh.psir, len, cudaMemcpyDeviceToHost) );
-  CudaSafeCall( cudaMemcpy(pd+len, cgh.psii, len, cudaMemcpyDeviceToHost) );
-      
+  CudaSafeCall( cudaMemcpy(pr, cgh.psir, len, cudaMemcpyDeviceToHost) );
+  CudaSafeCall( cudaMemcpy(pi, cgh.psii, len, cudaMemcpyDeviceToHost) );
+
+  idl_field = IDL_CvtComplex(2, idl_argv, NULL);
+
+  IDL_Deltmp(idl_fr);
+  IDL_Deltmp(idl_fi);
+  
   return idl_field;
 }
 
